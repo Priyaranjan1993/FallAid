@@ -1,16 +1,42 @@
 import React from 'react';
-import {StyleSheet, Text, View, Dimensions, AsyncStorage, Alert, ScrollView} from 'react-native';
+import {StyleSheet, Text, View, Dimensions, AsyncStorage, Alert, ScrollView, Platform} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {Input, Button} from 'react-native-elements';
 import GlobalFont from 'react-native-global-font';
 import Hr from "react-native-hr-plus";
 import utility from "./utility";
+import { HeaderBackButton } from 'react-navigation';
+import HomeScreen from "./HomeScreen";
+import Intro from "./Intro";
+import RNImmediatePhoneCall from "react-native-immediate-phone-call";
+
+import Dialog, {
+    DialogContent,
+    SlideAnimation,
+    DialogTitle,
+    DialogFooter,
+    DialogButton
+} from 'react-native-popup-dialog';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+const instructions = Platform.select({
+    ios: 'The app detected a fall , are you okay ?,\n' + 'Press Cancel if okay else choose the call option',
+    android:
+    'Great !! All set. \n\n'+
+
+    'The application would prompt you to dial to your \n'+'emergency contact automatically when you experience a ' +
+    'sudden fall. \n\n'+'In case you do not respond within  10 seconds, FallAid would automatically dial up to your emergency contact without your permission for your safety. '+
+    'Please press Continue to move forward.'
+});
+
 export default class EmergencyContacts extends React.Component {
 
-    static navigationOptions = {title: 'Emergency Contact'};
+    static navigationOptions = {title: 'Emergency Contact', headerTintColor:'#fff',
+        headerStyle: {
+            backgroundColor: '#f5a714'
+        },
+        headerLeft: null};
 
     constructor(props) {
         super(props);
@@ -18,7 +44,8 @@ export default class EmergencyContacts extends React.Component {
             userInfo: {
                 emName: '', emNumber: '', emEmail: '', name: '', email: '', number: ''
             },
-            isValid:true
+            isValid:true,
+            visible: false
         };
         this.setCache = this.setCache.bind(this);
 /*        this.getCache = this.getCache.bind(this);*/
@@ -29,6 +56,15 @@ export default class EmergencyContacts extends React.Component {
     }
 
     componentDidMount() {
+/*        let tt = {
+        emName: '',
+        emNumber: '',
+        emEmail: '',
+        name: '',
+        number: '',
+        email: ''
+    };
+        AsyncStorage.setItem('user', JSON.stringify(tt));*/
         let fontName = 'Roboto';
         GlobalFont.applyGlobal(fontName);
         let token = utility.getToken().then(
@@ -63,8 +99,8 @@ export default class EmergencyContacts extends React.Component {
     {
         this.state.isValid = ! (this.state.userInfo.emName != '' && this.state.userInfo.emNumber != '' && this.state.userInfo.name != '' &&
             this.state.userInfo.number != '' && this.state.userInfo.email != '');
-/*        console.log(this.state.isValid);
-        console.log("*****************");*/
+        console.log(this.state.isValid);
+        console.log("*****************");
     }
 
 
@@ -78,7 +114,10 @@ export default class EmergencyContacts extends React.Component {
             email: this.state.userInfo.email
         };
         AsyncStorage.setItem('user', JSON.stringify(obj));
-        this.props.navigation.navigate('Demo');
+        this.setState({
+            visible: true
+        });
+        //this.props.navigation.navigate('Tracker');
     };
 
 /*
@@ -123,6 +162,7 @@ export default class EmergencyContacts extends React.Component {
 
                     <Input
                         placeholder='Phone Number'
+                        keyboardType='numeric'
                         inputContainerStyle={styles.inputField}
                         onChangeText={
                             text => {
@@ -184,6 +224,7 @@ export default class EmergencyContacts extends React.Component {
 
                     <Input
                         placeholder='Phone Number'
+                        keyboardType='numeric'
                         inputContainerStyle={styles.inputField}
                         onChangeText={
                             text => {
@@ -230,6 +271,35 @@ export default class EmergencyContacts extends React.Component {
                         disabled={this.state.isValid}
                     />
 
+
+                    <Dialog
+                        visible={this.state.visible}
+                        dialogAnimation={new SlideAnimation({
+                            slideFrom: 'bottom',
+                        })}
+                        rounded={true}
+                        width={380}
+                        dialogTitle={<DialogTitle title="ALL SET"/>}
+                        footer={
+                            <DialogFooter>
+                                <DialogButton
+                                    text="CONTINUE"
+                                    onPress={() => {
+                                        this.setState({visible: false});
+                                        this.props.navigation.navigate('Tracker',{height:30,
+                                            initialIndicatorVal:0,
+                                            emergencyNumber: this.state.userInfo.emNumber
+                                        });
+                                    }}
+                                />
+                            </DialogFooter>
+                        }
+                    >
+                        <DialogContent>
+                            <Text style={styles.instructionss}>{instructions}</Text>
+                        </DialogContent>
+                    </Dialog>
+
                 </View>
             </ScrollView>
         );
@@ -254,6 +324,13 @@ const styles = StyleSheet.create({
     fallCSS: {
         width: '50%',
         top: '0%'
+    },
+    instructionss: {
+        textAlign: 'center',
+        color: '#333333',
+        marginBottom: 10,
+        marginTop: 10,
+        fontSize: 15,
     },
     textWithDivider: {
         color: "black",

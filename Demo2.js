@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {Avatar, Button} from 'react-native-elements';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import {StyleSheet, View, Text} from "react-native";
+import {StyleSheet, View, Text, Image} from "react-native";
 
 
 class Demo2 extends Component {
@@ -17,15 +17,21 @@ class Demo2 extends Component {
         return (
             <View style={styles.container}>
 
-                <Avatar
+
+                <Image
+                    style={{width: '100%', height: '50%'}}
+                    source={{uri: 'https://res.cloudinary.com/priyaranjan/image/upload/v1552694289/logo_transparent.png'}}
+                />
+
+          {/*      <Avatar
                     size="xlarge"
                     rounded
                     source={{
                         uri:
-                            'https://res.cloudinary.com/priyaranjan/image/upload/v1551245302/ESM2-150ppp.jpg',
+                            'https://res.cloudinary.com/priyaranjan/image/upload/v1552693567/logo_transparent.png',
                     }}
                 />
-                <Text style={styles.welcome}>FallAid</Text>
+                <Text style={styles.welcome}>FallAid</Text>*/}
 
                 <Button
                     title="Get Started "
@@ -46,7 +52,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#edeaf3',
+        backgroundColor: '#fff',
     },
     welcome: {
         fontSize: 50,

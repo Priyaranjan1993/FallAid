@@ -13,9 +13,10 @@ import {Avatar, Button} from 'react-native-elements';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {createStackNavigator, createAppContainer} from 'react-navigation';
 import Home from "./Home";
-import Demo from "./Demo";
+import Tracker from "./Tracker";
 import Demo2 from "./Demo2";
 import HomeScreen from "./HomeScreen";
+import Intro from "./Intro";
 import EmergencyContacts from "./EmergencyContacts";
 
 
@@ -36,15 +37,16 @@ export default class App extends React.Component {
 }
 /*const HomeComponent = (props) => {
     console.log(props.navigation.state);
-    return (this.state.isFirstLogin ? Home : Demo );
+    return (this.state.isFirstLogin ? Home : Tracker );
 };*/
 
 
 const AppNavigator = createStackNavigator({
         AppHome: {screen: HomeScreen},
-        Demo: {screen: Demo},
+        Tracker: {screen: Tracker},
         Demo2: {screen: Demo2},
-        EmergencyContacts: {screen: EmergencyContacts}
+        Intro: {screen: Intro},
+        EmergencyContacts: {screen: EmergencyContacts},
 
     },
     {
