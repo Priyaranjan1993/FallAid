@@ -27,6 +27,7 @@ export default class App extends React.Component {
         this.state = {
             isFirstLogin : false
         };
+        console.disableYellowBox = true;
        // this.getCache = this.getCache.bind(this);
     }
 

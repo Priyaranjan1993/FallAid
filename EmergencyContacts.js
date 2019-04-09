@@ -5,7 +5,7 @@ import {Input, Button} from 'react-native-elements';
 import GlobalFont from 'react-native-global-font';
 import Hr from "react-native-hr-plus";
 import utility from "./utility";
-import { HeaderBackButton } from 'react-navigation';
+import {HeaderBackButton} from 'react-navigation';
 import HomeScreen from "./HomeScreen";
 import Intro from "./Intro";
 import RNImmediatePhoneCall from "react-native-immediate-phone-call";
@@ -21,22 +21,44 @@ import Dialog, {
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const instructions = Platform.select({
-    ios: 'The app detected a fall , are you okay ?,\n' + 'Press Cancel if okay else choose the call option',
-    android:
-    'Great !! All set. \n\n'+
+    ios: 'Great !! All set. \n\n' +
 
-    'The application would prompt you to dial to your \n'+'emergency contact automatically when you experience a ' +
-    'sudden fall. \n\n'+'In case you do not respond within  10 seconds, FallAid would automatically dial up to your emergency contact without your permission for your safety. '+
+    'The application would prompt you to dial to your \n' + 'emergency contact automatically when you experience a ' +
+    'sudden fall. \n\n' + 'In case you do not respond within  10 seconds, FallAid would automatically dial up to your emergency contact without your permission for your safety. ' +
+    'Please press Continue to move forward.',
+    android:
+    'Great !! All set. \n\n' +
+
+    'The application would prompt you to dial to your \n' + 'emergency contact automatically when you experience a ' +
+    'sudden fall. \n\n' + 'In case you do not respond within  20 seconds, FallAid would automatically dial up to your emergency contact without your permission for your safety. ' +
     'Please press Continue to move forward.'
 });
 
 export default class EmergencyContacts extends React.Component {
 
-    static navigationOptions = {title: 'Emergency Contact', headerTintColor:'#fff',
-        headerStyle: {
-            backgroundColor: '#f5a714'
-        },
-        headerLeft: null};
+    static navigationOptions = ({navigation}) => {
+        return {
+            title: 'Emergency Contact',
+            headerTintColor: '#fff',
+            headerStyle: {
+                backgroundColor: '#f5a714'
+            },
+            headerLeft: navigation.getParam('leftButton'),
+            headerRight: (
+                <Button
+                    onPress={navigation.getParam('resetData')}
+                    title="RESET" type="clear" raised
+                    titleStyle={{color: '#fff'}}
+                />
+            ),
+        };
+    };
+
+/*    headerLeft: this.props.navigation.getParam("showBackBtn") == false ?  null : <Button
+title="Back  " type="clear" raised titleStyle={{color: '#fff'}}
+onPress={navigation.getParam('goBack')}
+/>*/
+
 
     constructor(props) {
         super(props);
@@ -44,27 +66,26 @@ export default class EmergencyContacts extends React.Component {
             userInfo: {
                 emName: '', emNumber: '', emEmail: '', name: '', email: '', number: ''
             },
-            isValid:true,
-            visible: false
+            isValid: true,
+            visible: false,
+            initialIndicatorVal: 0,
+            height: 0,
+            isBackButtonEnabled: this.props.navigation.getParam("showBackBtn")
         };
         this.setCache = this.setCache.bind(this);
-/*        this.getCache = this.getCache.bind(this);*/
+        /*        this.getCache = this.getCache.bind(this);*/
         this.isValid = this.isValid.bind(this);
         this.updateForm = this.updateForm.bind(this);
         this.isValidCheck = this.isValidCheck.bind(this);
+        this.trackerNavigate = this.trackerNavigate.bind(this);
+        this.gback = this.gback.bind(this);
 
     }
 
     componentDidMount() {
-/*        let tt = {
-        emName: '',
-        emNumber: '',
-        emEmail: '',
-        name: '',
-        number: '',
-        email: ''
-    };
-        AsyncStorage.setItem('user', JSON.stringify(tt));*/
+        this.props.navigation.setParams({resetData: this._resetData});
+        this.props.navigation.setParams({goBack: this._goBack});
+        this.props.navigation.setParams({leftButton: this._leftButton});
         let fontName = 'Roboto';
         GlobalFont.applyGlobal(fontName);
         let token = utility.getToken().then(
@@ -90,14 +111,95 @@ export default class EmergencyContacts extends React.Component {
         return !(this.state.userInfo.emName != '');
     }
 
-    updateForm(newState) {
-        this.setState(newState);
-       // console.log(newState);
+    _resetData = () => {
+        let newObj = {
+            emName: '',
+            emNumber: '',
+            emEmail: '',
+            name: '',
+            number: '',
+            email: ''
+        };
+        let heightVal = {
+            height: 0
+        };
+        AsyncStorage.setItem('user', JSON.stringify(newObj));
+        AsyncStorage.setItem('fallHeight', JSON.stringify(heightVal));
+        this.props.navigation.push('Intro');
+    };
+
+    _goBack = () => {
+        this.props.navigation.goBack();
+    };
+
+    gback()
+    {
+        this.props.navigation.goBack();
+    };
+
+    _leftButton = () => {
+        if(this.state.isBackButtonEnabled)
+        {
+            return <Button
+                title="Back  " type="clear" raised titleStyle={{color: '#fff'}}
+                onPress={this.gback}/>
+        }
+        else {
+            return null;
+        }
+    };
+
+    trackerNavigate() {
+
+        let initialVal = 0;
+        let fallHeightJson = {};
+        let parsedObj= {};
+        this.setState({visible: false});
+
+        utility.getToken().then(
+            (val) => {
+                console.log(val);
+                parsedObj = JSON.parse(val);
+            });
+        utility.getFallHeight().then(
+            (val) => {
+                if (val != null) {
+                    fallHeightJson = JSON.parse(val);
+                    console.log(fallHeightJson);
+
+                    this.setState({height: fallHeightJson.height});
+                    if (fallHeightJson.height == 30) {
+                        initialVal = 0;
+                    }
+                    else if (fallHeightJson.height == 45) {
+                        initialVal = 1;
+
+                    }
+                    else if (fallHeightJson.height == 65) {
+                        initialVal = 2;
+                    }
+                }
+                else {
+                    initialVal = 0;
+                }
+                this.setState({
+                    initialIndicatorVal: initialVal
+                });
+                this.props.navigation.push('Tracker', {
+                    height: fallHeightJson.height== undefined ? 30 : fallHeightJson.height,
+                    initialIndicatorVal: this.state.initialIndicatorVal,
+                    emergencyNumber: parsedObj.emNumber
+                });
+            });
     }
 
-    isValidCheck()
-    {
-        this.state.isValid = ! (this.state.userInfo.emName != '' && this.state.userInfo.emNumber != '' && this.state.userInfo.name != '' &&
+    updateForm(newState) {
+        this.setState(newState);
+        // console.log(newState);
+    }
+
+    isValidCheck() {
+        this.state.isValid = !(this.state.userInfo.emName != '' && this.state.userInfo.emNumber != '' && this.state.userInfo.name != '' &&
             this.state.userInfo.number != '' && this.state.userInfo.email != '');
         console.log(this.state.isValid);
         console.log("*****************");
@@ -120,17 +222,17 @@ export default class EmergencyContacts extends React.Component {
         //this.props.navigation.navigate('Tracker');
     };
 
-/*
-    getCache = async () => {
-        try {
-            let user = await AsyncStorage.getItem('user');
-            let parsed = JSON.parse(user);
-            alert(parsed.name);
-        }
-        catch (error) {
+    /*
+        getCache = async () => {
+            try {
+                let user = await AsyncStorage.getItem('user');
+                let parsed = JSON.parse(user);
+                alert(parsed.name);
+            }
+            catch (error) {
 
-        }
-    };*/
+            }
+        };*/
 
     render() {
         return (
@@ -284,13 +386,7 @@ export default class EmergencyContacts extends React.Component {
                             <DialogFooter>
                                 <DialogButton
                                     text="CONTINUE"
-                                    onPress={() => {
-                                        this.setState({visible: false});
-                                        this.props.navigation.navigate('Tracker',{height:30,
-                                            initialIndicatorVal:0,
-                                            emergencyNumber: this.state.userInfo.emNumber
-                                        });
-                                    }}
+                                    onPress={this.trackerNavigate}
                                 />
                             </DialogFooter>
                         }
@@ -331,6 +427,9 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         marginTop: 10,
         fontSize: 15,
+    },
+    reset: {
+        color: '#fff'
     },
     textWithDivider: {
         color: "black",

@@ -12,6 +12,8 @@ import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
 import com.facebook.react.shell.MainReactPackage;
 import com.facebook.soloader.SoLoader;
+import com.agontuk.RNFusedLocation.RNFusedLocationPackage;
+import com.someone.sendsms.SendSMSPackage;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +33,9 @@ public class MainApplication extends Application implements ReactApplication {
             new VectorIconsPackage(),
             new RNSensorsPackage(),
             new RNImmediatePhoneCallPackage(),
-            new RNGestureHandlerPackage()
+            new RNGestureHandlerPackage(),
+            new RNFusedLocationPackage(),
+            new SendSMSPackage()
       );
     }
 

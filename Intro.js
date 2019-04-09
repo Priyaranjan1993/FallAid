@@ -84,7 +84,9 @@ class Intro extends Component {
 
     render() {
         if (this.state.showRealApp) {
-            return this.props.navigation.navigate('EmergencyContacts');
+            return this.props.navigation.push('EmergencyContacts',{
+                showBackBtn: false
+            });
         } else {
             return <AppIntroSlider slides={slides} onDone={this._onDone} showSkipButton={true} onSkip={this._onDone}/>;
         }

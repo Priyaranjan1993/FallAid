@@ -1,11 +1,16 @@
 import React, {Component} from 'react';
 import {Avatar, Button} from 'react-native-elements';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import {StyleSheet, View, Text, Platform, AsyncStorage} from "react-native";
+import {StyleSheet, View, Text, Platform, AsyncStorage, ToastAndroid} from "react-native";
 import RNImmediatePhoneCall from 'react-native-immediate-phone-call';
 import {accelerometer, setUpdateIntervalForType, SensorTypes} from "react-native-sensors";
 import SwitchSelector from "react-native-switch-selector";
 import {map, filter} from "rxjs/operators";
+import ReactTimeout from 'react-timeout';
+import CountDown from 'react-native-countdown-component';
+import Geolocation from 'react-native-geolocation-service';
+import Communications from 'react-native-communications';
+import SendSMS from 'react-native-sms-x';
 import {
     BallIndicator,
     BarIndicator,
@@ -25,15 +30,21 @@ import Dialog, {
     DialogButton
 } from 'react-native-popup-dialog';
 import utility from "./utility";
+import GlobalFont from "react-native-global-font";
+import {NativeModules} from 'react-native';
+
 
 const instructions = Platform.select({
-    ios: 'The app detected a fall , are you okay ?,\n' + 'Press Cancel if okay else choose the call option',
+    ios:'The app detected a fall , are you okay ?,\n' +
+    'Press Cancel if okay else choose the call option \n\n'+
+    'No action would initiate a call after the countdown expires',
     android:
     'The app detected a fall , are you okay ?,\n' +
-    'Press Cancel if okay else choose the call option',
+    'Press Cancel if okay else choose the call option \n\n'+
+    'No action would initiate a call after the countdown expires',
 });
 
-setUpdateIntervalForType(SensorTypes.accelerometer, 10);
+setUpdateIntervalForType(SensorTypes.accelerometer, 50);
 
 class Tracker extends Component {
 
@@ -48,14 +59,21 @@ class Tracker extends Component {
             height: this.props.navigation.getParam("height"),
             visible: false,
             initialIndicatorVal: this.props.navigation.getParam("initialIndicatorVal"),
-            emergencyNumber:this.props.navigation.getParam("emergencyNumber")
+            emergencyNumber:this.props.navigation.getParam("emergencyNumber"),
+            lat:0,
+            long:0
         };
         this.changeHeight = this.changeHeight.bind(this);
+        //this.forceCall = this.forceCall().bind(this);
     }
 
     componentDidMount() {
         console.log(this.state);
+        let fontName = 'Roboto';
+        GlobalFont.applyGlobal(fontName);
     }
+
+
 
 
 
@@ -72,13 +90,45 @@ class Tracker extends Component {
 
     }
 
+    forceCall = () => {
+
+
+        if(this.state.visible == true)
+        {
+           console.log("2Latitude -> "+this.state.lat);
+           console.log("2Longitude -> "+this.state.long);
+            let parsedObj = {};
+            let emName = '';
+
+            this.setState({
+                visible: false
+            });
+
+            utility.getToken().then(
+                (val) => {
+                    console.log(val);
+                    parsedObj = JSON.parse(val);
+                    emName = parsedObj.emName;
+                });
+
+           // Communications.text('8572052392','Test Message from FallAId');
+           SendSMS.send(123, this.state.emergencyNumber, "Your friend "+emName+" is in trouble. He has experienced a " +
+                "fall and need your help urgently.\n He is at "+this.state.lat+" latitude and "+this.state.long+" longitude.\n\n-FallAid",
+                (msg)=>{
+                   // ToastAndroid.show(msg, ToastAndroid.SHORT);
+                    console.log(msg);
+                }
+            );
+           RNImmediatePhoneCall.immediatePhoneCall(this.state.emergencyNumber);
+        }
+    };
 
 
     render() {
         const options = [
-            {label: "30", value: "30"},
-            {label: "40", value: "40"},
-            {label: "50", value: "50"}
+            {label: "Low ", value: "30", imageIcon: require('./assets/help.png')},
+            {label: "Medium ", value: "45", imageIcon: require('./assets/accident.png')},
+            {label: "High ", value: "65", imageIcon: require('./assets/person-falling-down-stairs.png')}
         ];
 
 
@@ -86,23 +136,28 @@ class Tracker extends Component {
             .pipe(map(({x, y, z}) => x + y + z), filter(speed => speed > 20))
             .subscribe(
                 speed => {
-                    /*                  this.setState({
-                                          acc: speed
-                                      });*/
-                    //call(args).catch(console.error);
-                    //RNImmediatePhoneCall.immediatePhoneCall('+14085948932');
-                    console.log("**********************************");
-                    console.log(speed);
-                    console.log(this.state.height);
-                    console.log("**********************************");
                     if (speed > this.state.height) {
                         console.log("state height -- " + this.state.height);
                         console.log(`You fell with ${speed}"`);
                         this.setState({
                             visible: true
                         });
+                        Geolocation.getCurrentPosition(
+                            (pos) => {
+                                this.setState({
+                                    lat: pos.coords.latitude,
+                                    long:pos.coords.longitude
+                                });
+                                console.log("1Latitude -> "+pos.coords.latitude);
+                                console.log("1Longitude -> "+pos.coords.longitude);
+                            },
+                            (error) => {
+                                console.log(error.code, error.message);
+                            },
+                            { enableHighAccuracy: true, timeout: 1500, maximumAge: 1000 }
+                        );
+                       this.props.setTimeout(this.forceCall, 20000);
 
-                        subscription.unsubscribe();
                     }
                     console.log(`You moved your phone with ${speed}`)
                 },
@@ -110,6 +165,13 @@ class Tracker extends Component {
                     console.log("The sensor is not available");
                 }
             );
+
+
+        setTimeout(() => {
+            // If it's the last subscription to accelerometer it will stop polling in the native API
+            subscription.unsubscribe();
+        }, 10000);
+
 
         return (
             <View style={styles.container}>
@@ -119,10 +181,14 @@ class Tracker extends Component {
                     initial={this.state.initialIndicatorVal}
                     onPress={value => this.changeHeight(value)}
                     style={styles.switch}
+                    textColor='#7a44cf'
+                    selectedColor='#fff'
+                    buttonColor='#7a44cf'
+                    borderColor='#7a44cf'
+                    hasPadding
                 />
 
-                <WaveIndicator color='blue' size={580} count={3} waveFactor={0.55} waveMode="fill"/>
-
+                <WaveIndicator color='#7a44cf' size={580} count={3} waveFactor={0.55} waveMode="fill"/>
 
                 <Dialog
                     visible={this.state.visible}
@@ -152,15 +218,25 @@ class Tracker extends Component {
                 >
                     <DialogContent>
                         <Text style={styles.instructionss}>{instructions}</Text>
+                        <CountDown
+                            until={20}
+                            size={20}
+                            digitStyle={{backgroundColor: '#FFF'}}
+                            digitTxtStyle={{color: '#1CC625'}}
+                            timeToShow={['S']}
+                            timeLabels={{s: 'Seconds'}}
+                        />
                     </DialogContent>
                 </Dialog>
 
                 <Avatar
                     size="medium"
                     rounded
-                    icon={{name: 'user', type: 'font-awesome', color: 'orange'}}
+                    icon={{name: 'user', type: 'font-awesome', color: '#7a44cf'}}
                     overlayContainerStyle={{backgroundColor: 'white'}}
-                    onPress={() => this.props.navigation.navigate('EmergencyContacts')}
+                    onPress={() => this.props.navigation.push('EmergencyContacts',{
+                        showBackBtn: true
+                    })}
                     activeOpacity={0.1}
                     containerStyle={{marginBottom: 30}}
                 />
@@ -199,9 +275,9 @@ const styles = StyleSheet.create({
         marginBottom: 5,
     },
     switch: {
-        width: '60%',
+        width: '90%',
         marginTop: 40
     }
 });
 
-export default Tracker;
+export default ReactTimeout(Tracker);
